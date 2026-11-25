@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f7fb">
+  <title>Анализ успеваемости</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17233c;
+      --muted: #6b7890;
+      --line: #e7ebf2;
+      --blue: #4263eb;
+      --green: #16835d;
+      --red: #c04a55;
+      --surface: #fff;
+      --background: #f4f7fb;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--background);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main { width: min(100% - 32px, 1000px); margin: 0 auto; padding: 52px 0 64px; }
+    .heading { margin-bottom: 28px; }
+    .eyebrow { color: var(--blue); font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 8px 0; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.045em; }
+    .intro { margin: 0; max-width: 620px; color: var(--muted); line-height: 1.65; }
+
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .card, .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 5px 20px rgb(34 51 84 / 4%); }
+    .card { padding: 19px; }
+    .metric-label { color: var(--muted); font-size: .84rem; }
+    .metric-value { margin-top: 9px; font-size: 1.85rem; font-weight: 750; letter-spacing: -.04em; }
+    .metric-note { margin-top: 4px; color: var(--muted); font-size: .78rem; }
+    .panel { padding: 22px; }
+    .panel-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    h2 { margin: 0; font-size: 1.12rem; }
+    .controls { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: .84rem; }
+    select { padding: 8px 30px 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font: inherit; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 11px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .77rem; font-weight: 650; }
+    td { padding: 14px 12px; border-bottom: 1px solid var(--line); font-size: .92rem; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .score-cell { min-width: 190px; }
+    .score-line { display: flex; align-items: center; gap: 12px; }
+    .score-number { width: 34px; font-weight: 720; font-variant-numeric: tabular-nums; }
+    .track { height: 8px; flex: 1; overflow: hidden; border-radius: 99px; background: #edf0f6; }
+    .bar { height: 100%; border-radius: inherit; background: var(--blue); }
+    .bar.low { background: #e6a23c; }
+    .status { display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; padding: 5px 9px; font-size: .78rem; font-weight: 650; white-space: nowrap; }
+    .status.pass { background: #e7f6ef; color: var(--green); }
+    .status.fail { background: #fff0ef; color: var(--red); }
+    .status::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+    .footer-note { margin: 15px 2px 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+
+    @media (max-width: 720px) {
+      main { padding-top: 34px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .card { padding: 16px; }
+    }
+    @media (max-width: 420px) {
+      main { width: min(100% - 22px, 1000px); }
+      .panel { padding: 15px 12px; }
+      th, td { padding-right: 8px; padding-left: 8px; }
+      .score-cell { min-width: 145px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="heading">
+      <div class="eyebrow">Учебная аналитика</div>
+      <h1>Анализ успеваемости</h1>
+      <p class="intro">Обзор результатов студентов: средний балл, лучшие и минимальные результаты, а также количество сдавших.</p>
+    </header>
+
+    <section class="metrics" aria-label="Сводные показатели">
+      <article class="card">
+        <div class="metric-label">Студентов</div>
+        <div class="metric-value" id="student-count">—</div>
+        <div class="metric-note">в списке</div>
+      </article>
+      <article class="card">
+        <div class="metric-label">Средний балл</div>
+        <div class="metric-value" id="average-score">—</div>
+        <div class="metric-note">из 100 баллов</div>
+      </article>
+      <article class="card">
+        <div class="metric-label">Сдали</div>
+        <div class="metric-value" id="pass-count">—</div>
+        <div class="metric-note" id="pass-rate">—</div>
+      </article>
+      <article class="card">
+        <div class="metric-label">Лучший результат</div>
+        <div class="metric-value" id="top-score">—</div>
+        <div class="metric-note" id="top-student">—</div>
+      </article>
+    </section>
+
+    <section class="panel" aria-labelledby="results-title">
+      <div class="panel-header">
+        <h2 id="results-title">Результаты студентов</h2>
+        <label class="controls" for="sort-order">
+          Сортировка
+          <select id="sort-order">
+            <option value="score-desc">Сначала высокий балл</option>
+            <option value="score-asc">Сначала низкий балл</option>
+            <option value="name">По имени</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Студент</th><th scope="col">Результат</th><th scope="col">Статус</th></tr>
+          </thead>
+          <tbody id="grades-table"></tbody>
+        </table>
+      </div>
+      <p class="footer-note">Порог сдачи — 60 баллов. Средний балл рассчитывается по всем результатам.</p>
+    </section>
+  </main>
+
+  <script>
+    const grades = [
+      { name: "Макар", score: 85 },
+      { name: "Денис", score: 92 },
+      { name: "Анна", score: 78 },
+      { name: "Даша", score: 88 },
+      { name: "Студент_X", score: 45 }
+    ];
+    const passingScore = 60;
+
+    const average = grades.reduce((sum, student) => sum + student.score, 0) / grades.length;
+    const passed = grades.filter(student => student.score >= passingScore);
+    const best = grades.reduce((currentBest, student) => student.score > currentBest.score ? student : currentBest);
+
+    document.querySelector("#student-count").textContent = grades.length;
+    document.querySelector("#average-score").textContent = `${average.toFixed(1)}%`;
+    document.querySelector("#pass-count").textContent = `${passed.length} / ${grades.length}`;
+    document.querySelector("#pass-rate").textContent = `${Math.round((passed.length / grades.length) * 100)}% группы`;
+    document.querySelector("#top-score").textContent = `${best.score}%`;
+    document.querySelector("#top-student").textContent = best.name;
+
+    function renderGrades() {
+      const sortOrder = document.querySelector("#sort-order").value;
+      const sortedGrades = [...grades].sort((a, b) => {
+        if (sortOrder === "score-asc") return a.score - b.score;
+        if (sortOrder === "name") return a.name.localeCompare(b.name, "ru");
+        return b.score - a.score;
+      });
+
+      document.querySelector("#grades-table").innerHTML = sortedGrades.map(student => {
+        const hasPassed = student.score >= passingScore;
+        const status = hasPassed ? "Сдал" : "Не сдал";
+        return `<tr>
+          <td>${student.name}</td>
+          <td class="score-cell"><div class="score-line">
+            <span class="score-number">${student.score}</span>
+            <div class="track" role="img" aria-label="${student.score} из 100 баллов">
+              <div class="bar${hasPassed ? "" : " low"}" style="width: ${student.score}%"></div>
+            </div>
+          </div></td>
+          <td><span class="status ${hasPassed ? "pass" : "fail"}">${status}</span></td>
+        </tr>`;
+      }).join("");
+    }
+
+    document.querySelector("#sort-order").addEventListener("change", renderGrades);
+    renderGrades();
+  </script>
+</body>
+</html>
