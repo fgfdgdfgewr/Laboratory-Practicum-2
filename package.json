@@ -1,0 +1,8 @@
+{
+  "name": "academic-performance-analysis",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  }
+}
